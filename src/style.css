@@ -1,0 +1,91 @@
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+#app {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+}
+
+#edit {
+    display: flex;
+    align-items: baseline;
+    min-width: 40%;
+    max-width: 90%;
+    word-break: break-all;
+    white-space: break-spaces;
+    padding: 6px 22px;
+    border: 3px solid #eeeeee;
+    border-radius: 12px;
+    font-size: 72px;
+    color: gray;
+}
+
+.actions {
+    display: flex;
+    min-width: 40%;
+    margin: 30px;
+}
+
+.actions > button {
+    outline: none;
+    border: 1px #c9c9c9 solid;
+    border-radius: 6px;
+    background: #eeeeee;
+    color: gray;
+    padding: 6px 8px;
+    font-size: 18px;
+    transition: background ease-in-out .2s;
+}
+
+.actions > button:hover {
+    cursor: pointer;
+    background: #e0e0e0;
+}
+
+#console {
+    min-width: 40%;
+    min-height: 90px;
+    max-height: 400px;
+    padding: 4px 12px;
+    border: 2px solid #eeeeee;
+    border-radius: 12px;
+    font-size: 16px;
+    color: gray;
+    white-space: pre-wrap;
+}
+
+.mext-b {
+    font-weight: bold;
+}
+
+.mext-i {
+    font-style: italic;
+}
+
+.mext-df {
+    animation: flow 15s ease-in-out infinite;
+    background: linear-gradient(-60deg, #904e95, #904e95, #e73c7e, #ee7752);
+    background-size: 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+@keyframes flow {
+    0% {
+        background-position: 0 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0 50%;
+    }
+}

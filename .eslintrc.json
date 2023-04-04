@@ -1,0 +1,54 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:import/errors",
+        "plugin:import/warnings",
+        "plugin:@typescript-eslint/recommended",
+        "airbnb"
+    ],
+    "overrides": [
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
+        "@typescript-eslint",
+        "import",
+        "optimize-regex"
+    ],
+    "rules": {
+        "optimize-regex/optimize-regex": "warn",
+        "class-methods-use-this": "off",
+        "indent": [2, "tab"],
+        "no-tabs": "off",
+        "lines-between-class-members": ["error", "always", { "exceptAfterSingleLine": true }],
+        "no-unused-vars": "warn",
+        "import/extensions": "off",
+        "no-mixed-operators": "off",
+        "linebreak-style": 0,
+        "no-use-before-define": ["error", {"functions": false, "classes": false}],
+        "no-plusplus": "off",
+        "no-shadow": "off",
+        "max-len": ["error", {
+            "code": 120
+        }],
+        "no-trailing-spaces": "off",
+        "arrow-parens": "off",
+        "no-param-reassign": 0,
+        "global-require": 0,
+        "no-bitwise": "off"
+    },
+    "settings": {
+        "import/resolver": {
+            "node": {
+                "extensions": [".js", ".jsx", ".ts", ".tsx"]
+            }
+        }
+    }
+}
