@@ -1,7 +1,7 @@
-import MextBaseToken from './MextToken';
 import MextTokenType from './MextTokenType';
+import MextToken from './MextToken';
 
-interface MextTokenNewLine extends MextBaseToken {
+interface MextTokenNewLine extends MextToken {
 	type: MextTokenType.NewLine
 }
 

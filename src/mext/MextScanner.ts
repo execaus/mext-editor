@@ -61,7 +61,7 @@ class MextScanner {
 		let char = this.peek();
 		while (char !== null) {
 			count++;
-			this.moveForward()
+			this.moveForward();
 			char = this.peek();
 		}
 

@@ -1,4 +1,4 @@
-import Mext from './src/Mext';
+import Mext from './src/mext/Mext';
 import './src/style.css';
 import MextModel from './src/mext/types/MextModel';
 import MextTokenType from './src/mext/tokens/MextTokenType';

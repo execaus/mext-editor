@@ -5,9 +5,14 @@ class MextCarriage {
 	private readonly targetElement: HTMLElement;
 	private readonly scanner: MextScanner;
 
+	private readonly subscribers: (() => void)[];
+
 	constructor(targetElement: HTMLElement) {
 		this.targetElement = targetElement;
 		this.scanner = new MextScanner();
+		this.subscribers = [];
+
+		document.addEventListener('selectionchange', this.onSelectionChange);
 	}
 
 	public getPosition = (): number | null => {
@@ -23,21 +28,24 @@ class MextCarriage {
 
 	public setPosition = (position: number) => {
 		const range = document.createRange();
-		const nodes = this.targetElement.childNodes;
+		const tokenElements = this.getTokenElements();
 
 		let currentPosition = 0;
-		for (let i = 0; i < nodes.length; i++) {
-			const node = nodes[i];
-			if (node.textContent === null) {
+		for (let i = 0; i < tokenElements.length; i++) {
+			const tokenElement = tokenElements[i];
+			const nodeCharCount = this.getCharCount(tokenElement.textContent);
+
+			if (tokenElement.textContent === null) {
 				throw new Error('text content not found');
 			}
 
-			if (position >= currentPosition && position <= currentPosition + node.textContent.length) {
-				const relativePosition = currentPosition + node.textContent.length - position;
-				if (node.firstChild === null) {
-					throw new Error('text node not found');
+			if (position >= currentPosition && position <= currentPosition + nodeCharCount) {
+				const relativePosition = position - currentPosition;
+				if (tokenElement.firstChild === null) {
+					range.setStart(tokenElement, relativePosition);
+				} else {
+					range.setStart(tokenElement.firstChild, relativePosition);
 				}
-				range.setStart(node.firstChild, relativePosition);
 				range.collapse(true);
 
 				const sel = window.getSelection();
@@ -49,8 +57,51 @@ class MextCarriage {
 				break;
 			}
 
-			currentPosition += node.textContent.length;
+			currentPosition += nodeCharCount;
 		}
+	};
+
+	public setRange = (selectRange: MextRange) => {
+		const range = document.createRange();
+		const tokenElements = this.getTokenElements();
+
+		let currentPosition = 0;
+		for (let i = 0; i < tokenElements.length; i++) {
+			const tokenElement = tokenElements[i];
+			const nodeCharCount = this.getCharCount(tokenElement.textContent);
+
+			if (tokenElement.textContent === null) {
+				throw new Error('text content not found');
+			}
+
+			if (selectRange.start >= currentPosition && selectRange.start <= currentPosition + nodeCharCount) {
+				if (tokenElement.firstChild === null) {
+					throw new Error('text node not found');
+				}
+
+				const relativePosition = selectRange.start - currentPosition;
+				range.setStart(tokenElement.firstChild, relativePosition);
+			}
+
+			if (selectRange.end >= currentPosition && selectRange.end <= currentPosition + nodeCharCount) {
+				if (tokenElement.firstChild === null) {
+					throw new Error('text node not found');
+				}
+
+				const relativePosition = selectRange.end - currentPosition;
+				range.setEnd(tokenElement.firstChild, relativePosition);
+				break;
+			}
+
+			currentPosition += nodeCharCount;
+		}
+
+		const sel = window.getSelection();
+		if (sel === null) {
+			return;
+		}
+		sel.removeAllRanges();
+		sel.addRange(range);
 	};
 
 	public getSelection = (): MextRange | null => {
@@ -59,7 +110,8 @@ class MextCarriage {
 			return null;
 		}
 
-		const nodes = this.targetElement.childNodes;
+		const tokenElements = this.getTokenElements();
+
 		if (selection.anchorNode === null || selection.focusNode === null) {
 			return null;
 		}
@@ -67,8 +119,8 @@ class MextCarriage {
 		let startOffset = 0;
 		let currentPosition = 0;
 
-		for (let i = 0; i < nodes.length; i++) {
-			const node = nodes[i];
+		for (let i = 0; i < tokenElements.length; i++) {
+			const node = tokenElements[i];
 
 			if (node === selection.anchorNode.parentElement) {
 				startOffset = currentPosition + selection.anchorOffset;
@@ -86,12 +138,47 @@ class MextCarriage {
 		};
 	};
 
+	public subscribeChange = (subscriber: () => void) => {
+		this.subscribers.push(subscriber);
+	};
+
+	private onSelectionChange = () => {
+		const selection = this.getSelection();
+		if (selection === null) {
+			return;
+		}
+		this.callSubscribers();
+	};
+
+	private callSubscribers = () => {
+		this.subscribers.forEach(subscriber => subscriber());
+	};
+
 	private getCharCount = (str: string | null): number => {
 		if (str === null) {
 			return 0;
 		}
 		this.scanner.load(str);
 		return this.scanner.getCodePointCount();
+	};
+
+	private getTokenElements = (): HTMLElement[] => {
+		const rows = this.targetElement.childNodes;
+		const tokenElements: HTMLElement[] = [];
+
+		for (let i = 0; i < rows.length; i++) {
+			const row = rows[i];
+			for (let j = 0; j < row.childNodes.length; j++) {
+				const tokenElement = row.childNodes[j];
+				if (tokenElement instanceof HTMLElement) {
+					tokenElements.push(tokenElement);
+				} else {
+					throw new Error('token element is not html element');
+				}
+			}
+		}
+
+		return tokenElements;
 	};
 }
 

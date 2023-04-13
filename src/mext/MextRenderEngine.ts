@@ -9,62 +9,173 @@ class MextRenderEngine {
 	private readonly BOLD_CSS_CLASS = 'mext-b';
 	private readonly ITALIC_CSS_CLASS = 'mext-i';
 	private readonly DYNAMIC_FIELD_CSS_CLASS = 'mext-df';
+	private readonly TEXT_NODE_TYPE = 3;
 
 	private readonly targetElement: HTMLElement;
+	private readonly breakElement: HTMLElement;
 
 	constructor(targetElement: HTMLElement) {
 		this.targetElement = targetElement;
+		this.breakElement = document.createElement('br');
 	}
 
 	public render = (updatedModel: MextModel) => {
-		const nodes = this.targetElement.childNodes;
+		const { tokens } = updatedModel;
+		const rowsElements: Map<HTMLElement, HTMLElement[]> = new Map<HTMLElement, HTMLElement[]>();
+		const rows: HTMLElement[] = [];
 
-		// Пройдемся по всем токенам и обновим их содержимое в HTML
-		updatedModel.tokens.forEach((token, i) => {
-			const node = nodes[i];
+		// Сформировать карту текущего состояния DOM. Удалить текстовые узлы на местах строк.
+		this.targetElement.childNodes.forEach(rowNode => {
+			if (rowNode.nodeType === this.TEXT_NODE_TYPE) {
+				rowNode.remove();
+				return;
+			}
 
-			if (node instanceof HTMLElement) {
+			if (rowNode instanceof HTMLElement) {
+				const tokenElements: HTMLElement[] = [];
+				const tokenNodes = rowNode.childNodes;
+
+				tokenNodes.forEach(tokenNode => {
+					if (tokenNode.nodeType === this.TEXT_NODE_TYPE) {
+						tokenNode.remove();
+						return;
+					}
+
+					if (tokenNode instanceof HTMLElement) {
+						if (tokenNode.nodeName !== 'BR') {
+							tokenElements.push(tokenNode);
+						}
+					} else {
+						throw new Error('token node not html element');
+					}
+				});
+
+				rows.push(rowNode);
+				rowsElements.set(rowNode, tokenElements);
+			} else {
+				throw new Error('row node not html element');
+			}
+		});
+
+		if (tokens.length === 0 || (tokens.length === 1 && tokens[0].content.length === 0)) {
+			this.renderEmpty(rows);
+			return;
+		}
+
+		if (this.breakElement.isConnected) {
+			this.breakElement.remove();
+		}
+
+		let rowIndex = 0;
+		let elementIndex = 0;
+		for (let i = 0; i < tokens.length; i++) {
+			const token = tokens[i];
+			let isMutateElement = true;
+
+			let rowElement = rows[rowIndex];
+			if (rowElement === undefined) {
+				const createdRow = this.getRowElement();
+				rows.push(createdRow);
+				rowsElements.set(createdRow, []);
+				this.targetElement.append(createdRow);
+				rowElement = createdRow;
+			}
+
+			const rowElements = rowsElements.get(rowElement);
+			if (rowElements === undefined) {
+				throw new Error('row elements not found');
+			}
+			const tokenElement = rowElements[elementIndex];
+			if (tokenElement === undefined) {
+				const elem = this.getTokenElement(token);
+				rowElement.append(elem);
+				isMutateElement = false;
+			}
+
+			if (token.type === MextTokenType.NewLine) {
+				rowIndex++;
+				elementIndex = 0;
+				for (let j = i; j < rowElements.length; j++) {
+					const elem = rowElements[j];
+					elem.remove();
+				}
+				isMutateElement = false;
+			}
+
+			if (isMutateElement) {
 				// Обновляем содержимое текстового токена
 				if (token.type === MextTokenType.String) {
-					node.textContent = String.fromCodePoint(...token.content);
-					node.style.color = token.color;
-					node.style.fontSize = token.fontSize;
-					node.style.fontFamily = token.fontFamily;
+					const requireContent = String.fromCodePoint(...token.content);
+					if (tokenElement.textContent !== requireContent) {
+						tokenElement.textContent = requireContent;
+					}
+					tokenElement.style.color = token.color;
+					tokenElement.style.fontSize = token.fontSize;
+					tokenElement.style.fontFamily = token.fontFamily;
 				}
 
 				// Обновляем содержимое динамического поля
 				if (token.type === MextTokenType.DynamicField) {
-					node.classList.add(this.DYNAMIC_FIELD_CSS_CLASS);
-					node.textContent = String.fromCodePoint(CharCode.Hash, ...token.content);
-					node.style.color = token.color;
-					node.style.fontSize = token.fontSize;
-					node.style.fontFamily = token.fontFamily;
+					tokenElement.classList.add(this.DYNAMIC_FIELD_CSS_CLASS);
+					tokenElement.textContent = String.fromCodePoint(CharCode.Hash, ...token.content);
+					tokenElement.style.color = token.color;
+					tokenElement.style.fontSize = token.fontSize;
+					tokenElement.style.fontFamily = token.fontFamily;
 				}
 
 				// Обновляем формат
 				if (token.format & MextFormat.Bold) {
-					node.classList.add(this.BOLD_CSS_CLASS);
+					tokenElement.classList.add(this.BOLD_CSS_CLASS);
 				} else {
-					node.classList.remove(this.BOLD_CSS_CLASS);
+					tokenElement.classList.remove(this.BOLD_CSS_CLASS);
 				}
 
 				if (token.format & MextFormat.Italic) {
-					node.classList.add(this.ITALIC_CSS_CLASS);
+					tokenElement.classList.add(this.ITALIC_CSS_CLASS);
 				} else {
-					node.classList.remove(this.ITALIC_CSS_CLASS);
+					tokenElement.classList.remove(this.ITALIC_CSS_CLASS);
 				}
 			}
-		});
 
-		// Удаляем из HTML лишние токены
-		while (nodes.length > updatedModel.tokens.length) {
-			this.targetElement.removeChild(nodes[nodes.length - 1]);
+			elementIndex++;
 		}
 
-		// Добавляем в HTML новые токены
-		for (let i = nodes.length; i < updatedModel.tokens.length; i++) {
-			const token = updatedModel.tokens[i];
-			this.pushRenderedToken(token);
+		// Удаляем не нужные элементы в строке
+		const rowElement = rows[rowIndex];
+		if (rowElement === undefined) {
+			throw new Error('row not found');
+		}
+
+		const rowElements = rowsElements.get(rowElement);
+		if (rowElements === undefined) {
+			throw new Error('row elements not found');
+		}
+
+		for (let i = elementIndex; i < rowElements.length; i++) {
+			rowElements[i].remove();
+		}
+	};
+
+	private renderEmpty = (rows: HTMLElement[]) => {
+		if (rows.length > 0) {
+			for (let i = 1; i < rows.length; i++) {
+				rows[i].remove();
+			}
+		}
+
+		let row = rows[0];
+		if (row === undefined) {
+			row = this.getRowElement();
+			row.append(this.breakElement);
+			this.targetElement.append(row);
+			return;
+		}
+
+		if (row instanceof HTMLElement) {
+			row.innerHTML = '';
+			row.append(this.breakElement);
+		} else {
+			throw new Error('first row not html element');
 		}
 	};
 
@@ -72,6 +183,8 @@ class MextRenderEngine {
 		const elem = this.getTokenElement(token);
 		this.targetElement.append(elem);
 	};
+
+	private getRowElement = (): HTMLElement => document.createElement('div');
 
 	private getTokenElement = (token: MextToken) => {
 		let elem: HTMLElement;
@@ -97,8 +210,7 @@ class MextRenderEngine {
 			elem.classList.add('mext-df');
 			break;
 		case MextTokenType.NewLine:
-			elem = document.createElement('span');
-			elem.textContent = '\n';
+			elem = document.createElement('br');
 			break;
 		default: throw new Error(`token (${token.type}) not found`);
 		}

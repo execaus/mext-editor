@@ -1,6 +1,6 @@
 import MextScanner from './MextScanner';
 import SpecialPhrase from './types/SpecialPhrase';
-import MextUtils from '../MextUtils';
+import MextUtils from './MextUtils';
 
 class MextParser {
 	private readonly targetElement: HTMLElement;
@@ -79,7 +79,6 @@ class MextParser {
 		if (!isValidPrevChar) {
 			return null;
 		}
-
 
 		const startPosition = this.scanner.getCursor();
 		const phrase = this.getEmptyPhrase(startChar, startPosition);

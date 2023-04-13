@@ -1,4 +1,6 @@
-import CharCode from './mext/types/CharCode';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { uuid } from 'uuidv4';
+import CharCode from './types/CharCode';
 
 class MextUtils {
 	/**
@@ -27,6 +29,8 @@ class MextUtils {
 	 * Вернет символьное представление кода
 	 */
 	static toSymbol = (code: number): string => String.fromCodePoint(code);
+
+	static getUUID = (): string => uuid();
 }
 
 export default MextUtils;
